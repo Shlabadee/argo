@@ -51,8 +51,7 @@ typedef struct ArgoInstance
 } ArgoInstance;
 
 ArgoReturnType Argo_Tokenize(ArgoInstance* instance, ArgoOption* options, size_t size,
-                             size_t argc, char** argv, bool ignore_unknown_flags,
-                             uint8_t help_size);
+                             size_t argc, char** argv, bool ignore_unknown_flags);
 ArgoReturnType Argo_Help(ArgoInstance* instance);
 void Argo_PrintError();
 

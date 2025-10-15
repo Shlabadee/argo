@@ -241,8 +241,7 @@ static ArgoErrorType h_handle_flag(ArgoInstance* instance, size_t argc, char** a
 }
 
 ArgoReturnType Argo_Tokenize(ArgoInstance* instance, ArgoOption* options, size_t size,
-                             size_t argc, char** argv, bool ignore_unknown_flags,
-                             uint8_t help_size)
+                             size_t argc, char** argv, bool ignore_unknown_flags)
 {
 	ArgoDataHelper helper;
 	helper.mode = ArgoTokenMode_Flag;
@@ -251,7 +250,6 @@ ArgoReturnType Argo_Tokenize(ArgoInstance* instance, ArgoOption* options, size_t
 	helper.ignore_unknown_flags = ignore_unknown_flags;
 	instance->size = size;
 	instance->options = options;
-	instance->help_size = help_size;
 	helper.combined_flag = false;
 
 	error_report.arg = NULL;
