@@ -313,7 +313,7 @@ ArgoReturnType Argo_Tokenize(ArgoInstance* instance, ArgoOption* options, size_t
 	return ArgoReturnType_Success;
 }
 
-ArgoReturnType Argo_Help(ArgoInstance* instance)
+ArgoReturnType Argo_PrintHelp(ArgoInstance* instance)
 {
 	// calculate maximum width for flag column
 	size_t max_flag_len = 0;
