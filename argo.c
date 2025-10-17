@@ -157,6 +157,9 @@ static ArgoErrorType h_handle_short_option(ArgoInstance* instance, char* arg, si
 				return ArgoErrorType_UnknownFlag;
 			}
 
+			++sn_i;
+			short_name = arg[sn_i];
+
 			continue;
 		}
 
