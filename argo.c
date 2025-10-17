@@ -13,12 +13,14 @@ typedef enum ArgoErrorType
 	ArgoErrorType_InvalidFlag,
 	ArgoErrorType_ExpectedFlag,
 	ArgoErrorType_ExpectedValue,
+	ArgoErrorType_DashAsShort,
+	ArgoErrorType_NULLAsShort,
 	ArgoErrorType_UnknownError
 } ArgoErrorType;
 
 static const char* error_msgs[] = {
-    "No error",      "Unknown flag",   "Invalid flag",
-    "Expected flag", "Expected value", "Unknown error",
+    "No error",       "Unknown flag",        "Invalid flag",        "Expected flag",
+    "Expected value", "Found dash as short", "Found NULL as short", "Unknown error",
 };
 
 typedef enum ArgoFlagType
@@ -243,6 +245,20 @@ static ArgoErrorType h_handle_flag(ArgoInstance* instance, size_t argc, char** a
 	return ArgoErrorType_UnknownError;
 }
 
+ArgoErrorType h_validate_short_flags(ArgoOption* options, size_t size)
+{
+	for (size_t i = 0; i < size; ++i)
+	{
+		if (options[i].short_name == '\0')
+			return ArgoErrorType_NULLAsShort;
+
+		if (options[i].short_name == '-')
+			return ArgoErrorType_DashAsShort;
+	}
+
+	return ArgoErrorType_NoError;
+}
+
 ArgoReturnType Argo_Tokenize(ArgoInstance* instance, ArgoOption* options, size_t size,
                              size_t argc, char** argv, bool ignore_unknown_flags)
 {
@@ -259,6 +275,11 @@ ArgoReturnType Argo_Tokenize(ArgoInstance* instance, ArgoOption* options, size_t
 	error_report.arg_short = '\0';
 	error_report.type = ArgoErrorType_NoError;
 	error_report.flag_type = ArgoFlagType_NotAFlag;
+
+	error_report.type = h_validate_short_flags(options, size);
+
+	if (error_report.type != ArgoErrorType_NoError)
+		return ArgoReturnType_Failure;
 
 	for (helper.argv_i = 1; helper.argv_i < argc; ++helper.argv_i)
 	{
@@ -362,6 +383,14 @@ void Argo_PrintError()
 	if (error_report.type == ArgoErrorType_NoError)
 	{
 		printf("%s%s\n", error_prefix, error_msgs[error_report.type]);
+		return;
+	}
+
+	if (error_report.type == ArgoErrorType_DashAsShort
+	    || error_report.type == ArgoErrorType_NULLAsShort)
+	{
+		printf("%s%s (contact program developer)\n", error_prefix,
+		       error_msgs[error_report.type]);
 		return;
 	}
 
