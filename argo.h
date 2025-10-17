@@ -1,5 +1,5 @@
-#ifndef ARGO_TOKENIZER_H
-#define ARGO_TOKENIZER_H
+#ifndef ARGO_LEXER_H
+#define ARGO_LEXER_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,4 +59,4 @@ void Argo_PrintError();
 }
 #endif
 
-#endif // ARGO_TOKENIZER_H
+#endif // ARGO_LEXER_H
