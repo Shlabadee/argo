@@ -23,4 +23,6 @@ The following are features that may be added based on complexity and overall lib
 |Multiple values|Allow for flag values such as `--flag multiple values`|
 |Boolean negation|Negate boolean flags with `--no-*` syntax.|
 
+---
+
 **Rule of thumb:** This is meant to be an `argv` lexer, not a configuration manager.
