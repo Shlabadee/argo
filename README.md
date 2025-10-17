@@ -60,8 +60,8 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    a = strtof(options[OPTION_NUMA].value, NULL, 10);
-    b = strtof(options[OPTION_NUMB].value, NULL, 10);
+    a = strtof(options[OPTION_NUMA].value, NULL);
+    b = strtof(options[OPTION_NUMB].value, NULL);
 
     printf("%f + %f = %f\n", a, b, a + b);
 
