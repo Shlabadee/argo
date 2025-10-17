@@ -8,7 +8,7 @@ What follows is a basic setup and use for Argo.
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "argo.c"
+#include "argo.h"
 
 #define OPTION_HELP 0
 #define OPTION_NUMA 1
