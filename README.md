@@ -44,7 +44,7 @@ int main(int argc, char** argv)
 
     if (options[OPTION_HELP].found)
     {
-        Argo_Help(&instance);
+        Argo_PrintHelp(&instance);
         return 0;
     }
 
