@@ -129,7 +129,8 @@ static ArgoReturnType h_find_short_option(ArgoInstance* instance, char arg, size
 		if (instance->options[i].short_name == Argo_NoShortFlag)
 			continue;
 
-		if (arg == instance->options[i].short_name)
+		// if arg is in option short name
+		if (strchr(instance->options[i].short_name, arg))
 		{
 			*option_i = i;
 			return ArgoReturnType_Success;
@@ -245,20 +246,6 @@ static ArgoErrorType h_handle_flag(ArgoInstance* instance, size_t argc, char** a
 	return ArgoErrorType_UnknownError;
 }
 
-ArgoErrorType h_validate_short_flags(ArgoOption* options, size_t size)
-{
-	for (size_t i = 0; i < size; ++i)
-	{
-		if (options[i].short_name == '\0')
-			return ArgoErrorType_NULLAsShort;
-
-		if (options[i].short_name == '-')
-			return ArgoErrorType_DashAsShort;
-	}
-
-	return ArgoErrorType_NoError;
-}
-
 ArgoReturnType Argo_Tokenize(ArgoInstance* instance, ArgoOption* options, size_t size,
                              size_t argc, char** argv, bool ignore_unknown_flags)
 {
@@ -275,11 +262,6 @@ ArgoReturnType Argo_Tokenize(ArgoInstance* instance, ArgoOption* options, size_t
 	error_report.arg_short = '\0';
 	error_report.type = ArgoErrorType_NoError;
 	error_report.flag_type = ArgoFlagType_NotAFlag;
-
-	error_report.type = h_validate_short_flags(options, size);
-
-	if (error_report.type != ArgoErrorType_NoError)
-		return ArgoReturnType_Failure;
 
 	for (helper.argv_i = 1; helper.argv_i < argc; ++helper.argv_i)
 	{
@@ -320,11 +302,25 @@ ArgoReturnType Argo_PrintHelp(ArgoInstance* instance)
 	for (size_t i = 0; i < instance->size; ++i)
 	{
 		ArgoOption* opt = &instance->options[i];
+		char shortbuf[64] = {0};
 		char temp[256];
+
+		// format multiple short flags as "-a, -b, -c"
+		if (opt->short_name != Argo_NoShortFlag && opt->short_name && *opt->short_name)
+		{
+			const char* sn = opt->short_name;
+			for (size_t j = 0; sn[j] != '\0' && j < sizeof(shortbuf) - 4; ++j)
+			{
+				size_t pos = strlen(shortbuf);
+				snprintf(shortbuf + pos, sizeof(shortbuf) - pos, "-%c%s", sn[j],
+				         (sn[j + 1] != '\0') ? ", " : "");
+			}
+		}
+
 		if (opt->short_name != Argo_NoShortFlag && opt->long_name != Argo_NoLongFlag)
-			snprintf(temp, sizeof(temp), "  -%c, --%s", opt->short_name, opt->long_name);
+			snprintf(temp, sizeof(temp), "  %s, --%s", shortbuf, opt->long_name);
 		else if (opt->short_name != Argo_NoShortFlag)
-			snprintf(temp, sizeof(temp), "  -%c", opt->short_name);
+			snprintf(temp, sizeof(temp), "  %s", shortbuf);
 		else if (opt->long_name != Argo_NoLongFlag)
 			snprintf(temp, sizeof(temp), "      --%s", opt->long_name);
 		else
@@ -341,6 +337,7 @@ ArgoReturnType Argo_PrintHelp(ArgoInstance* instance)
 	for (size_t i = 0; i < instance->size; ++i)
 	{
 		ArgoOption* opt = &instance->options[i];
+		char shortbuf[64] = {0};
 		char flagbuf[256];
 		const char* type_hint = "";
 
@@ -359,11 +356,23 @@ ArgoReturnType Argo_PrintHelp(ArgoInstance* instance)
 				break; // Boolean flags show no hint
 		}
 
+		// same multi-short handling as above
+		if (opt->short_name != Argo_NoShortFlag && opt->short_name && *opt->short_name)
+		{
+			const char* sn = opt->short_name;
+			for (size_t j = 0; sn[j] != '\0' && j < sizeof(shortbuf) - 4; ++j)
+			{
+				size_t pos = strlen(shortbuf);
+				snprintf(shortbuf + pos, sizeof(shortbuf) - pos, "-%c%s", sn[j],
+				         (sn[j + 1] != '\0') ? ", " : "");
+			}
+		}
+
 		if (opt->short_name != Argo_NoShortFlag && opt->long_name != Argo_NoLongFlag)
-			snprintf(flagbuf, sizeof(flagbuf), "  -%c, --%s%s", opt->short_name, opt->long_name,
+			snprintf(flagbuf, sizeof(flagbuf), "  %s, --%s%s", shortbuf, opt->long_name,
 			         type_hint);
 		else if (opt->short_name != Argo_NoShortFlag)
-			snprintf(flagbuf, sizeof(flagbuf), "  -%c%s", opt->short_name, type_hint);
+			snprintf(flagbuf, sizeof(flagbuf), "  %s%s", shortbuf, type_hint);
 		else if (opt->long_name != Argo_NoLongFlag)
 			snprintf(flagbuf, sizeof(flagbuf), "      --%s%s", opt->long_name, type_hint);
 		else
@@ -377,7 +386,7 @@ ArgoReturnType Argo_PrintHelp(ArgoInstance* instance)
 	return ArgoReturnType_Success;
 }
 
-void Argo_PrintError()
+void Argo_PrintError(void)
 {
 	const char* error_prefix = "Argo State: ";
 	if (error_report.type == ArgoErrorType_NoError)

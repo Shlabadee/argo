@@ -9,7 +9,7 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 
-#define Argo_NoShortFlag '\0'
+#define Argo_NoShortFlag NULL
 #define Argo_NoLongFlag NULL
 
 typedef enum ArgoReturnType
@@ -28,7 +28,7 @@ typedef enum ArgoOptionType
 
 typedef struct ArgoOption
 {
-	char short_name;
+	char* short_name;
 	char* long_name;
 	ArgoOptionType type;
 	char* description;
@@ -53,7 +53,7 @@ typedef struct ArgoInstance
 ArgoReturnType Argo_Tokenize(ArgoInstance* instance, ArgoOption* options, size_t size,
                              size_t argc, char** argv, bool ignore_unknown_flags);
 ArgoReturnType Argo_PrintHelp(ArgoInstance* instance);
-void Argo_PrintError();
+void Argo_PrintError(void);
 
 #ifdef __cplusplus
 }
