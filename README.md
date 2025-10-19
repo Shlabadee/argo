@@ -20,10 +20,10 @@ int main(int argc, char** argv)
 
     ArgoOption options[] =
     {
-        Argo_Set('h', "help", ArgoOptionType_Boolean,
+        Argo_Set("h?", "help", ArgoOptionType_Boolean,
                  "displays this help message and exits"),
-        Argo_Set('a', "numA", ArgoOptionType_Float, "number A"),
-        Argo_Set('b', "numB", ArgoOptionType_Float, "number B"),
+        Argo_Set("a", "numA", ArgoOptionType_Float, "number A"),
+        Argo_Set("b", "numB", ArgoOptionType_Float, "number B"),
     };
 
     ArgoInstance instance;
