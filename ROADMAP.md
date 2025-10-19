@@ -6,7 +6,6 @@ This document serves to declare the future goals for Argo. The following table l
 
 |Name|Description|Target|
 |--|--|--|
-|Multiple short names for options|The addition of multiple short names for options for greater flexibility and conciseness.|Late 2025|
 |Required field|Adding in a required field for use when calling `Argo_PrintHelp()`.|2026|
 |Print help widths|Allow for greater flexibility based on min-max width and terminal size.|2026|
 |Print help colors|Allow for stylization based on existing, cross-platform standards.|2026|
