@@ -13,8 +13,8 @@ Argo is an `argv` lexer intended for C and C++ programs. It does not parse the a
 What follows is a basic setup and use for Argo.
 
 ```c
+#include <stddef.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 #include "argo.h"
 
