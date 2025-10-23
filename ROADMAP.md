@@ -6,7 +6,8 @@ This document serves to declare the future goals for Argo. The following table l
 
 |Name|Description|Target|
 |--|--|--|
-|Required field|Adding in a required field for use when calling `Argo_PrintHelp()`.|2026|
+|Improved flag scanning|Replace strict mode swapping method for an explicit lexer model.|2026|
+|Multiple values|Allow for flag values such as `--flag multiple values`|
 |Print help widths|Allow for greater flexibility based on min-max width and terminal size.|2026|
 |Print help colors|Allow for stylization based on existing, cross-platform standards.|2026|
 |Improved error messages|Provide more specific issues and even suggestions to the user.|2026|
@@ -20,7 +21,7 @@ The following are features that may be added based on complexity and overall lib
 
 |Name|Description|
 |--|--|
-|Multiple values|Allow for flag values such as `--flag multiple values`|
+|Required field|Adding in a required field for use when calling `Argo_PrintHelp()`.|2026|
 |Boolean negation|Negate boolean flags with `--no-*` syntax.|
 
 ---
