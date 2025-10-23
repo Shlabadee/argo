@@ -12,6 +12,7 @@ This document serves to declare the future goals for Argo. The following table l
 |Improved error messages|Provide more specific issues and even suggestions to the user.|2026|
 |Flag assignment|Allow for `--flag=value` format.|2026|
 |Case insensitivity|Allow for case insensitivity in either/or flags and values.|2026|
+|Last-in/First-in option|Allow whether the first or last value of a flag input should be used.|2026|
 
 ## Possible Additions
 
