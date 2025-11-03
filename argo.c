@@ -411,3 +411,34 @@ void Argo_PrintError(void)
 	else
 		printf("%s)\n", error_report.arg);
 }
+
+#if defined __linux__ || defined __APPLE__ || defined __FreeBSD__
+	#include <sys/ioctl.h>
+	#include <unistd.h>
+
+int Argo_GetTerminalSize(void)
+{
+	struct winsize ws;
+	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0)
+	{
+		if (ws.ws_col > 0)
+			return ws.ws_col;
+	}
+	return 80; // fallback
+}
+#else
+	#ifdef _WIN32
+		#include <windows.h>
+
+int Argo_GetTerminalSize(void)
+{
+	CONSOLE_SCREEN_BUFFER_INFO csbi;
+	HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	if (hStdOut != INVALID_HANDLE_VALUE && GetConsoleScreenBufferInfo(hStdOut, &csbi))
+	{
+		return csbi.srWindow.Right - csbi.srWindow.Left + 1;
+	}
+	return 80; // fallback
+}
+	#endif
+#endif

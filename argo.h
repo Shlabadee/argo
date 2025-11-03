@@ -54,6 +54,7 @@ ArgoReturnType Argo_Tokenize(ArgoInstance* instance, ArgoOption* options, size_t
                              size_t argc, char** argv, bool ignore_unknown_flags);
 ArgoReturnType Argo_PrintHelp(ArgoInstance* instance);
 void Argo_PrintError(void);
+int Argo_GetTerminalSize(void);
 
 #ifdef __cplusplus
 }
