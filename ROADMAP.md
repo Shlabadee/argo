@@ -2,7 +2,7 @@
 
 This document serves to declare the future goals for Argo. The following table lists these goals out.
 
-`Last Update: October 2025`
+`Last Update: November 2025`
 
 |          Name          |                               Description                              | Target |
 |------------------------|------------------------------------------------------------------------|--------|
