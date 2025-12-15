@@ -382,7 +382,6 @@ ArgoReturnType Argo_PrintHelp(ArgoInstance* instance)
 		       opt->description ? opt->description : "");
 	}
 
-	puts("\n");
 	return ArgoReturnType_Success;
 }
 
