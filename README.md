@@ -1,4 +1,5 @@
-# Argo Lexer
+<img src="https://shlabadee.com/r/images/Argo.png" alt="drawing" width="480"/>
+
 Argo is an `argv` lexer intended for C and C++ programs. It does not parse the actual values and is intended for well-formed arguments. The programmer is responsible for properly converting strings to integers, floats, and potentially other formats in addition to checking the presence of required flags.
 
 ## Features
