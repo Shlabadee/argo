@@ -436,7 +436,7 @@ int Argo_GetTerminalSize(void)
 	HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
 
 	if (hStdOut != INVALID_HANDLE_VALUE && GetConsoleScreenBufferInfo(hStdOut, &csbi))
-		return csbi.srWindow.Right - csbi.srWindow.Left + 1;
+		return (csbi.srWindow.Right - csbi.srWindow.Left) + 1;
 
 	return 80; // fallback
 }
