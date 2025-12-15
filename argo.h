@@ -46,7 +46,8 @@ typedef struct ArgoInstance
 {
 	ArgoOption* options;
 	size_t size;
-	char** unformatted_args_begin;
+	char** unformatted;
+	size_t unformatted_size;
 	uint8_t help_size;
 } ArgoInstance;
 

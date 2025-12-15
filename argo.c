@@ -227,7 +227,10 @@ static ArgoErrorType h_handle_flag(ArgoInstance* instance, size_t argc, char** a
 			break;
 		case ArgoFlagType_Unformatted:
 			if (argc - helper->argv_i > 1)
-				instance->unformatted_args_begin = &argv[helper->argv_i + 1];
+			{
+				instance->unformatted = &argv[helper->argv_i + 1];
+				instance->unformatted_size = argc - (helper->argv_i + 1);
+			}
 			helper->mode = ArgoTokenMode_Unformatted;
 			return ArgoErrorType_NoError;
 			break;
@@ -256,6 +259,8 @@ ArgoReturnType Argo_Tokenize(ArgoInstance* instance, ArgoOption* options, size_t
 	helper.ignore_unknown_flags = ignore_unknown_flags;
 	instance->size = size;
 	instance->options = options;
+	instance->unformatted = NULL;
+	instance->unformatted_size = 0;
 	helper.combined_flag = false;
 
 	error_report.arg = NULL;
