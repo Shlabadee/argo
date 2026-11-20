@@ -48,9 +48,18 @@ typedef struct ArgoInstance
 	size_t size;
 	char** unformatted;
 	size_t unformatted_size;
-	uint8_t help_size;
+
+	// Optional caller-owned array for positional arguments before --.
+	// Entries borrow argv pointers. The first unused slot is set to NULL.
+	// Excess positional arguments are ignored.
+	char** positionals;
+	size_t positional_size;     // Read only. Number of pointers stored.
+	size_t positional_capacity; // Number of pointer slots, including any terminator.
 } ArgoInstance;
 
+// Initialize the instance before first use, e.g. ArgoInstance instance = {0}.
+// If you don't, Argo may think `positionals` points to valid memory which will result in a
+// segfault. That's a no-no.
 ArgoReturnType Argo_Tokenize(ArgoInstance* instance, ArgoOption* options, size_t size,
                              size_t argc, char** argv, bool ignore_unknown_flags);
 ArgoReturnType Argo_PrintHelp(ArgoInstance* instance);

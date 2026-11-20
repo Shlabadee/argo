@@ -36,16 +36,18 @@ int main(int argc, char** argv)
 	    Argo_Set("hH?", "help", ArgoOptionType_Boolean, "displays this help message and exits"),
 	    Argo_Set("aA", "numA", ArgoOptionType_Float, "number A"),
 	    Argo_Set("bB", "numB", ArgoOptionType_Float, "number B"),
+	    Argo_Set("ty", NULL, ArgoOptionType_Boolean, "example X"),
+	    Argo_Set("ui", NULL, ArgoOptionType_Boolean, "example Y"),
 	};
 
-	ArgoInstance instance;
-	ArgoReturnType rt = Argo_Tokenize(
-		&instance,
-	    options,
-		sizeof(options) / sizeof(options[0]),
-	    (size_t)argc,
-		argv,
-	    true // ignore unknown flags
+	ArgoInstance instance = {0};
+	char* positionals[2] = {0};
+	instance.positionals = positionals;
+	instance.positional_capacity = 2;
+
+	ArgoReturnType rt = Argo_Tokenize(&instance, options, sizeof(options) / sizeof(options[0]),
+	                                  (size_t)argc, argv,
+	                                  true // ignore unknown flags
 	);
 
 	if (!rt)
@@ -94,6 +96,26 @@ int main(int argc, char** argv)
 	else
 	{
 		puts("No unformatted.");
+	}
+
+	for (unsigned int i = 0; i < 2; ++i)
+	{
+		if (positionals[i] == NULL)
+			break;
+
+		if (i == 0 && !a_set)
+		{
+			a = strtol(positionals[i], NULL, 10);
+			a_set = true;
+			continue;
+		}
+
+		if (i == 1 && !b_set)
+		{
+			b = strtol(positionals[i], NULL, 10);
+			b_set = true;
+			continue;
+		}
 	}
 
 	if (!a_set || !b_set)

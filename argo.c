@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
+
 #include <string.h>
 
 #include "argo.h"
@@ -9,8 +10,6 @@ typedef enum ArgoErrorType
 {
 	ArgoErrorType_NoError,
 	ArgoErrorType_UnknownFlag,
-	ArgoErrorType_InvalidFlag,
-	ArgoErrorType_ExpectedFlag,
 	ArgoErrorType_ExpectedValue,
 	ArgoErrorType_DashAsShort,
 	ArgoErrorType_NULLAsShort,
@@ -22,8 +21,6 @@ typedef enum ArgoErrorType
 static const char* error_msgs[ArgoErrorType_Enum_Size] = {
     "No error",
     "Unknown flag",
-    "Invalid flag",
-    "Expected flag",
     "Expected value",
     "Found dash as short",
     "Found NULL as short",
@@ -37,7 +34,6 @@ typedef enum ArgoFlagType
 	ArgoFlagType_Short,
 	ArgoFlagType_Unformatted,
 	ArgoFlagType_NotAFlag,
-	ArgoFlagType_InvalidFlag
 } ArgoFlagType;
 
 typedef enum ArgoTokenMode
@@ -233,13 +229,14 @@ static ArgoErrorType h_handle_flag(ArgoInstance* instance, size_t argc, char** a
 			return ArgoErrorType_NoError;
 			break;
 		case ArgoFlagType_NotAFlag:
-			error_report.type = ArgoErrorType_InvalidFlag;
-			error_report.flag_type = ArgoFlagType_NotAFlag;
-			error_report.arg_pos = helper->argv_i;
-			error_report.arg = argv[helper->argv_i];
-			return ArgoErrorType_ExpectedFlag;
-
-			break;
+			if (instance->positionals
+			    && instance->positional_size < instance->positional_capacity)
+			{
+				instance->positionals[instance->positional_size++] = flag;
+				if (instance->positional_size < instance->positional_capacity)
+					instance->positionals[instance->positional_size] = NULL;
+			}
+			return ArgoErrorType_NoError;
 		default:
 			break;
 	}
@@ -259,6 +256,10 @@ ArgoReturnType Argo_Tokenize(ArgoInstance* instance, ArgoOption* options, size_t
 	instance->options = options;
 	instance->unformatted = NULL;
 	instance->unformatted_size = 0;
+	instance->positional_size = 0;
+
+	if (instance->positionals && instance->positional_capacity)
+		instance->positionals[0] = NULL;
 
 	error_report.arg = NULL;
 	error_report.arg_short = '\0';
