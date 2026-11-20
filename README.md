@@ -39,9 +39,13 @@ int main(int argc, char** argv)
 	};
 
 	ArgoInstance instance;
-	ArgoReturnType rt = Argo_Tokenize(&instance, options, sizeof(options) / sizeof(options[0]),
-	                                  (size_t)argc, argv,
-	                                  true // ignore unknown flags
+	ArgoReturnType rt = Argo_Tokenize(
+		&instance,
+	    options,
+		sizeof(options) / sizeof(options[0]),
+	    (size_t)argc,
+		argv,
+	    true // ignore unknown flags
 	);
 
 	if (!rt)

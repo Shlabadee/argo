@@ -1,7 +1,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
-
 #include <string.h>
 
 #include "argo.h"
@@ -15,12 +14,21 @@ typedef enum ArgoErrorType
 	ArgoErrorType_ExpectedValue,
 	ArgoErrorType_DashAsShort,
 	ArgoErrorType_NULLAsShort,
-	ArgoErrorType_UnknownError
+	ArgoErrorType_NonBooleanInCompound,
+	ArgoErrorType_UnknownError,
+	ArgoErrorType_Enum_Size
 } ArgoErrorType;
 
-static const char* error_msgs[] = {
-    "No error",       "Unknown flag",        "Invalid flag",        "Expected flag",
-    "Expected value", "Found dash as short", "Found NULL as short", "Unknown error",
+static const char* error_msgs[ArgoErrorType_Enum_Size] = {
+    "No error",
+    "Unknown flag",
+    "Invalid flag",
+    "Expected flag",
+    "Expected value",
+    "Found dash as short",
+    "Found NULL as short",
+    "Combined short flags must all be boolean",
+    "Unknown error",
 };
 
 typedef enum ArgoFlagType
@@ -56,7 +64,6 @@ typedef struct ArgoDataHelper
 	size_t option_i;
 	ArgoTokenMode mode;
 	bool ignore_unknown_flags;
-	bool combined_flag;
 } ArgoDataHelper;
 
 static ArgoFlagType h_get_flag_type(char* arg)
@@ -140,38 +147,47 @@ static ArgoReturnType h_find_short_option(ArgoInstance* instance, char arg, size
 	return ArgoReturnType_Failure;
 }
 
-static ArgoErrorType h_handle_short_option(ArgoInstance* instance, char* arg, size_t* option_i,
-                                           bool ignore_unknown_flags, bool* combined_flag)
+static ArgoErrorType h_handle_short_option(ArgoInstance* instance, char* arg,
+                                           ArgoDataHelper* helper)
 {
-	char short_name;
-	size_t sn_i = 1;
-	short_name = arg[sn_i];
+	const bool combined = arg[2] != '\0';
+	size_t option_i;
 
-	while (short_name != '\0')
+	// Validate the whole group before marking any of its options as found.
+	for (char* name = arg + 1; *name; ++name)
 	{
-		if (h_find_short_option(instance, short_name, option_i) == ArgoReturnType_Failure)
+		ArgoErrorType error;
+		if (h_find_short_option(instance, *name, &option_i) == ArgoReturnType_Failure)
 		{
-			if (!ignore_unknown_flags)
-			{
-				error_report.arg_short = short_name;
-				error_report.flag_type = ArgoFlagType_Short;
-				error_report.arg = arg;
-				error_report.type = ArgoErrorType_UnknownFlag;
-				return ArgoErrorType_UnknownFlag;
-			}
-
-			++sn_i;
-			short_name = arg[sn_i];
-
-			continue;
+			if (helper->ignore_unknown_flags)
+				continue;
+			error = ArgoErrorType_UnknownFlag;
 		}
+		else if (combined && instance->options[option_i].type != ArgoOptionType_Boolean)
+			error = ArgoErrorType_NonBooleanInCompound;
+		else
+			continue;
 
-		instance->options[*option_i].found = true;
-		++sn_i;
-		short_name = arg[sn_i];
+		error_report.type = error;
+		error_report.flag_type = ArgoFlagType_Short;
+		error_report.arg_pos = helper->argv_i;
+		error_report.arg = arg;
+		error_report.arg_short = *name;
+		return error;
 	}
 
-	*combined_flag = sn_i > 2 ? true : false;
+	for (char* name = arg + 1; *name; ++name)
+	{
+		if (h_find_short_option(instance, *name, &option_i) == ArgoReturnType_Failure)
+			continue;
+
+		instance->options[option_i].found = true;
+		if (instance->options[option_i].type != ArgoOptionType_Boolean)
+		{
+			helper->option_i = option_i;
+			helper->mode = ArgoTokenMode_Value;
+		}
+	}
 
 	return ArgoErrorType_NoError;
 }
@@ -206,25 +222,7 @@ static ArgoErrorType h_handle_flag(ArgoInstance* instance, size_t argc, char** a
 			return ArgoErrorType_NoError;
 			break;
 		case ArgoFlagType_Short:
-			helper->combined_flag = false;
-			error = h_handle_short_option(instance, flag, &helper->option_i,
-			                              helper->ignore_unknown_flags, &helper->combined_flag);
-			if (error == ArgoErrorType_UnknownFlag)
-			{
-				error_report.flag_type = ArgoFlagType_Short;
-				error_report.arg_pos = helper->argv_i;
-				return ArgoErrorType_UnknownFlag;
-			}
-
-			if (!helper->combined_flag
-			    && instance->options[helper->option_i].type != ArgoOptionType_Boolean)
-			{
-				helper->mode = ArgoTokenMode_Value;
-			}
-
-			return ArgoErrorType_NoError;
-
-			break;
+			return h_handle_short_option(instance, flag, helper);
 		case ArgoFlagType_Unformatted:
 			if (argc - helper->argv_i > 1)
 			{
@@ -261,7 +259,6 @@ ArgoReturnType Argo_Tokenize(ArgoInstance* instance, ArgoOption* options, size_t
 	instance->options = options;
 	instance->unformatted = NULL;
 	instance->unformatted_size = 0;
-	helper.combined_flag = false;
 
 	error_report.arg = NULL;
 	error_report.arg_short = '\0';
@@ -303,50 +300,53 @@ ArgoReturnType Argo_Tokenize(ArgoInstance* instance, ArgoOption* options, size_t
 ArgoReturnType Argo_PrintHelp(ArgoInstance* instance)
 {
 	// calculate maximum width for flag column
-	size_t max_flag_len = 0;
+	size_t max_flag_length = 0;
 	for (size_t i = 0; i < instance->size; ++i)
 	{
-		ArgoOption* opt = &instance->options[i];
-		char shortbuf[64] = {0};
+		ArgoOption* option = &instance->options[i];
+		char short_buffer[64] = {0};
 		char temp[256];
 
 		// format multiple short flags as "-a, -b, -c"
-		if (opt->short_name != Argo_NoShortFlag && opt->short_name && *opt->short_name)
+		if (option->short_name != Argo_NoShortFlag && option->short_name && *option->short_name)
 		{
-			const char* sn = opt->short_name;
-			for (size_t j = 0; sn[j] != '\0' && j < sizeof(shortbuf) - 4; ++j)
+			const char* short_name = option->short_name;
+
+			for (size_t j = 0; short_name[j] != '\0' && j < sizeof(short_buffer) - 4; ++j)
 			{
-				size_t pos = strlen(shortbuf);
-				snprintf(shortbuf + pos, sizeof(shortbuf) - pos, "-%c%s", sn[j],
-				         (sn[j + 1] != '\0') ? ", " : "");
+				size_t pos = strlen(short_buffer);
+				snprintf(short_buffer + pos, sizeof(short_buffer) - pos, "-%c%s", short_name[j],
+				         (short_name[j + 1] != '\0') ? ", " : "");
 			}
 		}
 
-		if (opt->short_name != Argo_NoShortFlag && opt->long_name != Argo_NoLongFlag)
-			snprintf(temp, sizeof(temp), "  %s, --%s", shortbuf, opt->long_name);
-		else if (opt->short_name != Argo_NoShortFlag)
-			snprintf(temp, sizeof(temp), "  %s", shortbuf);
-		else if (opt->long_name != Argo_NoLongFlag)
-			snprintf(temp, sizeof(temp), "      --%s", opt->long_name);
+		if (option->short_name != Argo_NoShortFlag && option->long_name != Argo_NoLongFlag)
+			snprintf(temp, sizeof(temp), "  %s, --%s", short_buffer, option->long_name);
+		else if (option->short_name != Argo_NoShortFlag)
+			snprintf(temp, sizeof(temp), "  %s", short_buffer);
+		else if (option->long_name != Argo_NoLongFlag)
+			snprintf(temp, sizeof(temp), "      --%s", option->long_name);
 		else
 			snprintf(temp, sizeof(temp), "  (none)");
 
-		size_t len = strlen(temp);
-		if (opt->type != ArgoOptionType_Boolean)
-			len += 8; // space for hints
-		if (len > max_flag_len)
-			max_flag_len = len;
+		size_t length = strlen(temp);
+
+		if (option->type != ArgoOptionType_Boolean)
+			length += 8; // space for hints
+
+		if (length > max_flag_length)
+			max_flag_length = length;
 	}
 
 	// print formatted help lines
 	for (size_t i = 0; i < instance->size; ++i)
 	{
-		ArgoOption* opt = &instance->options[i];
-		char shortbuf[64] = {0};
-		char flagbuf[256];
+		ArgoOption* option = &instance->options[i];
+		char short_buffer[64] = {0};
+		char flag_buffer[256];
 		const char* type_hint = "";
 
-		switch (opt->type)
+		switch (option->type)
 		{
 			case ArgoOptionType_Integer:
 				type_hint = " <int>";
@@ -362,29 +362,38 @@ ArgoReturnType Argo_PrintHelp(ArgoInstance* instance)
 		}
 
 		// same multi-short handling as above
-		if (opt->short_name != Argo_NoShortFlag && opt->short_name && *opt->short_name)
+		if (option->short_name != Argo_NoShortFlag && option->short_name && *option->short_name)
 		{
-			const char* sn = opt->short_name;
-			for (size_t j = 0; sn[j] != '\0' && j < sizeof(shortbuf) - 4; ++j)
+			const char* short_name = option->short_name;
+			for (size_t j = 0; short_name[j] != '\0' && j < sizeof(short_buffer) - 4; ++j)
 			{
-				size_t pos = strlen(shortbuf);
-				snprintf(shortbuf + pos, sizeof(shortbuf) - pos, "-%c%s", sn[j],
-				         (sn[j + 1] != '\0') ? ", " : "");
+				size_t pos = strlen(short_buffer);
+				snprintf(short_buffer + pos, sizeof(short_buffer) - pos, "-%c%s", short_name[j],
+				         short_name[j + 1] != '\0' ? ", " : "");
 			}
 		}
 
-		if (opt->short_name != Argo_NoShortFlag && opt->long_name != Argo_NoLongFlag)
-			snprintf(flagbuf, sizeof(flagbuf), "  %s, --%s%s", shortbuf, opt->long_name,
+		if (option->short_name != Argo_NoShortFlag && option->long_name != Argo_NoLongFlag)
+		{
+			snprintf(flag_buffer, sizeof(flag_buffer), "  %s, --%s%s", short_buffer,
+			         option->long_name, type_hint);
+		}
+		else if (option->short_name != Argo_NoShortFlag)
+		{
+			snprintf(flag_buffer, sizeof(flag_buffer), "  %s%s", short_buffer, type_hint);
+		}
+		else if (option->long_name != Argo_NoLongFlag)
+		{
+			snprintf(flag_buffer, sizeof(flag_buffer), "      --%s%s", option->long_name,
 			         type_hint);
-		else if (opt->short_name != Argo_NoShortFlag)
-			snprintf(flagbuf, sizeof(flagbuf), "  %s%s", shortbuf, type_hint);
-		else if (opt->long_name != Argo_NoLongFlag)
-			snprintf(flagbuf, sizeof(flagbuf), "      --%s%s", opt->long_name, type_hint);
+		}
 		else
-			snprintf(flagbuf, sizeof(flagbuf), "  (none)%s", type_hint);
+		{
+			snprintf(flag_buffer, sizeof(flag_buffer), "  (none)%s", type_hint);
+		}
 
-		printf("%-*s %s\n", (int)max_flag_len, flagbuf,
-		       opt->description ? opt->description : "");
+		printf("%-*s %s\n", (int)max_flag_length, flag_buffer,
+		       option->description ? option->description : "");
 	}
 
 	return ArgoReturnType_Success;
@@ -393,6 +402,7 @@ ArgoReturnType Argo_PrintHelp(ArgoInstance* instance)
 void Argo_PrintError(void)
 {
 	const char* error_prefix = "Argo State: ";
+
 	if (error_report.type == ArgoErrorType_NoError)
 	{
 		printf("%s%s\n", error_prefix, error_msgs[error_report.type]);
