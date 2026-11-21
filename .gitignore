@@ -2,3 +2,5 @@
 .vscode/*
 *notepad*
 *old*
+Makefile
+*.o
