@@ -7,6 +7,8 @@ Argo is an `argv` lexer intended for C and C++ programs. It does not parse the a
 - Long flags
 - Short flags
 - Combined short flags
+- Positional arguments
+- Unformatted arguments (after `--`)
 - Help/usage screen
 - Error reporting
 
@@ -98,7 +100,7 @@ int main(int argc, char** argv)
 		puts("No unformatted.");
 	}
 
-	for (unsigned int i = 0; i < 2; ++i)
+	for (size_t i = 0; i < instance.positional_size; ++i)
 	{
 		if (positionals[i] == NULL)
 			break;
