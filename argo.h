@@ -57,9 +57,19 @@ typedef struct ArgoInstance
 	size_t positional_capacity; // Number of pointer slots, including any terminator.
 } ArgoInstance;
 
-// Initialize the instance before first use, e.g. ArgoInstance instance = {0}.
-// If you don't, Argo may think `positionals` points to valid memory which will result in a
-// segfault. That's a no-no.
+/*
+Initialize the instance before first use, e.g. `ArgoInstance instance = {0};`. If you don't,
+Argo may think `positionals` points to valid memory which will result in a segfault. That's a
+no-no.
+
+Options that take values accept `--name=value`, `-x=value`, or a separate value argument. Argo
+doesn't check what's actually after the equal sign so always double-check! Argo doesn't allocate
+memory but just borrows it from `argv`, and it doesn't modify `argv` at all.
+
+Argo relies on the system to resolve `--input-file="path/to/my file.txt"` to
+`--input-file=path/to/my file.txt`. But this is a standard convention so there's *probably*
+nothing to worry about.
+*/
 ArgoReturnType Argo_Tokenize(ArgoInstance* instance, ArgoOption* options, size_t size,
                              size_t argc, char** argv, bool ignore_unknown_flags);
 ArgoReturnType Argo_PrintHelp(ArgoInstance* instance);

@@ -7,6 +7,7 @@ Argo is an `argv` lexer intended for C and C++ programs. It does not parse the a
 - Long flags
 - Short flags
 - Combined short flags
+- Flag assignments (e.g. `--flag=value`)
 - Positional arguments
 - Unformatted arguments (after `--`)
 - Help/usage screen

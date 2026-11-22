@@ -14,6 +14,7 @@ typedef enum ArgoErrorType
 	ArgoErrorType_DashAsShort,
 	ArgoErrorType_NULLAsShort,
 	ArgoErrorType_NonBooleanInCompound,
+	ArgoErrorType_UnexpectedAssignment,
 	ArgoErrorType_UnknownError,
 	ArgoErrorType_Enum_Size
 } ArgoErrorType;
@@ -25,6 +26,7 @@ static const char* error_msgs[ArgoErrorType_Enum_Size] = {
     "Found dash as short",
     "Found NULL as short",
     "Combined short flags must all be boolean",
+    "Assignment requires a single value-taking option",
     "Unknown error",
 };
 
@@ -86,14 +88,15 @@ static ArgoFlagType h_get_flag_type(char* arg)
 }
 
 static ArgoReturnType h_find_long_option(ArgoInstance* instance, char* long_name,
-                                         size_t* option_i)
+                                         size_t name_length, size_t* option_i)
 {
 	for (size_t i = 0; i < instance->size; ++i)
 	{
 		if (instance->options[i].long_name == Argo_NoLongFlag)
 			continue;
 
-		if (strncmp(long_name, instance->options[i].long_name, 255) == 0)
+		if (strlen(instance->options[i].long_name) == name_length
+		    && memcmp(long_name, instance->options[i].long_name, name_length) == 0)
 		{
 			*option_i = i;
 			return ArgoReturnType_Success;
@@ -103,26 +106,55 @@ static ArgoReturnType h_find_long_option(ArgoInstance* instance, char* long_name
 	return ArgoReturnType_Failure;
 }
 
-static ArgoErrorType h_handle_long_option(ArgoInstance* instance, char* arg, size_t* option_i,
-                                          bool ignore_unknown_flags)
+static void h_accept_option(ArgoInstance* instance, size_t option_i, char* equals,
+                            ArgoDataHelper* helper)
 {
-	char* long_name = &arg[2];
-	ArgoReturnType rt = h_find_long_option(instance, long_name, option_i);
+	ArgoOption* option = &instance->options[option_i];
+	option->found = true;
 
-	if (rt == ArgoReturnType_Failure)
+	if (equals)
 	{
-		if (ignore_unknown_flags)
-			return ArgoErrorType_UnknownFlag;
+		option->value = &equals[1];
+	}
+	else if (option->type != ArgoOptionType_Boolean)
+	{
+		helper->option_i = option_i;
+		helper->mode = ArgoTokenMode_Value;
+	}
+}
 
-		error_report.type = ArgoErrorType_UnknownFlag;
-		error_report.flag_type = ArgoFlagType_Long;
-		error_report.arg = long_name;
-		error_report.type = ArgoErrorType_UnknownFlag;
-		return ArgoErrorType_UnknownFlag;
+static ArgoErrorType h_handle_long_option(ArgoInstance* instance, char* arg,
+                                          ArgoDataHelper* helper)
+{
+	char* name = &arg[2];
+	char* equals = strchr(name, '=');
+	size_t length = equals ? (size_t)(equals - name) : strlen(name);
+	size_t option_i;
+
+	ArgoErrorType error;
+	if (length == 0
+	    || h_find_long_option(instance, name, length, &option_i) == ArgoReturnType_Failure)
+	{
+		if (helper->ignore_unknown_flags)
+			return ArgoErrorType_NoError;
+
+		error = ArgoErrorType_UnknownFlag;
+	}
+	else if (equals && instance->options[option_i].type == ArgoOptionType_Boolean)
+	{
+		error = ArgoErrorType_UnexpectedAssignment;
+	}
+	else
+	{
+		h_accept_option(instance, option_i, equals, helper);
+		return ArgoErrorType_NoError;
 	}
 
-	instance->options[*option_i].found = true;
-	return ArgoErrorType_NoError;
+	error_report.type = error;
+	error_report.flag_type = ArgoFlagType_Long;
+	error_report.arg = arg;
+	error_report.arg_pos = helper->argv_i;
+	return error;
 }
 
 static ArgoReturnType h_find_short_option(ArgoInstance* instance, char arg, size_t* option_i)
@@ -146,23 +178,35 @@ static ArgoReturnType h_find_short_option(ArgoInstance* instance, char arg, size
 static ArgoErrorType h_handle_short_option(ArgoInstance* instance, char* arg,
                                            ArgoDataHelper* helper)
 {
-	const bool combined = arg[2] != '\0';
+	char* equals = strchr(&arg[2], '=');
+	char* end = equals ? equals : &arg[strlen(arg)];
+	const bool combined = end - (&arg[1]) > 1;
 	size_t option_i;
 
 	// Validate the whole group before marking any of its options as found.
-	for (char* name = arg + 1; *name; ++name)
+	for (char* name = &arg[1]; name < end; ++name)
 	{
 		ArgoErrorType error;
 		if (h_find_short_option(instance, *name, &option_i) == ArgoReturnType_Failure)
 		{
 			if (helper->ignore_unknown_flags)
 				continue;
+
 			error = ArgoErrorType_UnknownFlag;
 		}
 		else if (combined && instance->options[option_i].type != ArgoOptionType_Boolean)
+		{
 			error = ArgoErrorType_NonBooleanInCompound;
+		}
+		else if (equals
+		         && (combined || instance->options[option_i].type == ArgoOptionType_Boolean))
+		{
+			error = ArgoErrorType_UnexpectedAssignment;
+		}
 		else
+		{
 			continue;
+		}
 
 		error_report.type = error;
 		error_report.flag_type = ArgoFlagType_Short;
@@ -172,17 +216,12 @@ static ArgoErrorType h_handle_short_option(ArgoInstance* instance, char* arg,
 		return error;
 	}
 
-	for (char* name = arg + 1; *name; ++name)
+	for (char* name = &arg[1]; name < end; ++name)
 	{
 		if (h_find_short_option(instance, *name, &option_i) == ArgoReturnType_Failure)
 			continue;
 
-		instance->options[option_i].found = true;
-		if (instance->options[option_i].type != ArgoOptionType_Boolean)
-		{
-			helper->option_i = option_i;
-			helper->mode = ArgoTokenMode_Value;
-		}
+		h_accept_option(instance, option_i, equals, helper);
 	}
 
 	return ArgoErrorType_NoError;
@@ -192,51 +231,37 @@ static ArgoErrorType h_handle_flag(ArgoInstance* instance, size_t argc, char** a
                                    ArgoDataHelper* helper)
 {
 	char* flag = argv[helper->argv_i];
+
 	switch (h_get_flag_type(flag))
 	{
-		ArgoErrorType error;
-
 		case ArgoFlagType_Long:
-			error = h_handle_long_option(instance, flag, &helper->option_i,
-			                             helper->ignore_unknown_flags);
-			if (error == ArgoErrorType_UnknownFlag)
-			{
-				if (!helper->ignore_unknown_flags)
-				{
-					error_report.flag_type = ArgoFlagType_Long;
-					return ArgoErrorType_UnknownFlag;
-				}
+			return h_handle_long_option(instance, flag, helper);
 
-				helper->mode = ArgoTokenMode_Flag;
-			}
-			else
-			{
-				if (instance->options[helper->option_i].type != ArgoOptionType_Boolean)
-					helper->mode = ArgoTokenMode_Value;
-			}
-
-			return ArgoErrorType_NoError;
-			break;
 		case ArgoFlagType_Short:
 			return h_handle_short_option(instance, flag, helper);
+
 		case ArgoFlagType_Unformatted:
 			if (argc - helper->argv_i > 1)
 			{
 				instance->unformatted = &argv[helper->argv_i + 1];
 				instance->unformatted_size = argc - (helper->argv_i + 1);
 			}
+
 			helper->mode = ArgoTokenMode_Unformatted;
 			return ArgoErrorType_NoError;
-			break;
+
 		case ArgoFlagType_NotAFlag:
 			if (instance->positionals
 			    && instance->positional_size < instance->positional_capacity)
 			{
 				instance->positionals[instance->positional_size++] = flag;
+
 				if (instance->positional_size < instance->positional_capacity)
 					instance->positionals[instance->positional_size] = NULL;
 			}
+
 			return ArgoErrorType_NoError;
+
 		default:
 			break;
 	}
