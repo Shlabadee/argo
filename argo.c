@@ -436,8 +436,8 @@ ArgoReturnType Argo_PrintHelp(ArgoInstance* instance)
 		}
 
 		printf("%-*s %s%s\n", (int)max_flag_length, flag_buffer,
-		       option->flags & ARGO_REQUIRED ? "[required] " : "",
-		       option->description ? option->description : "");
+		       option->description ? option->description : "",
+		       option->flags & ARGO_REQUIRED ? " [required]" : "");
 	}
 
 	return ArgoReturnType_Success;
