@@ -2,17 +2,13 @@
 
 This document serves to declare the future goals for Argo. The following table lists these goals out.
 
-`Last Update: November 2025`
+`Last Updated: November 2026`
 
-|          Name          |                               Description                              | Target |
-|------------------------|------------------------------------------------------------------------|--------|
-|Multiple values         |Allow for flag values such as `--flag multiple values`                  |    2026|
-|Print help widths       |Allow for greater flexibility based on min-max width and terminal size. |    2026|
-|Print help colors       |Allow for stylization based on existing, cross-platform standards.      |    2026|
-|Improved error messages |Provide more specific issues and even suggestions to the user.          |    2026|
-|Flag assignment         |Allow for `--flag=value` format.                                        |    2026|
-|Case insensitivity      |Allow for case insensitivity in either/or flags and values.             |    2026|
-|Last-in/First-in option |Allow whether the first or last value of a flag input should be used.   |    2026|
+|          Name          |                               Description                                                    | Target |
+|------------------------|----------------------------------------------------------------------------------------------|--------|
+|Improved error messages |Provide more specific issues and even suggestions to the user.                                |    2026|
+|Last-in/First-in option |Allow whether the first or last value of a flag input should be used.                         |    2026|
+|Renaming Argo to Ahoy   |Argo is the name of an ecosystem used to manage software across multiple networked computers. To avoid confusion and potential dependency conflicts, Argo will be renamed to Ahoy. |    2026|
 
 ## Possible Additions
 
@@ -21,7 +17,6 @@ The following are features that may be added based on complexity and overall lib
 |       Name      |                              Description                           |
 |-----------------|--------------------------------------------------------------------|
 |Required field   | Adding in a required field for use when calling `Argo_PrintHelp()`.|
-|Boolean negation | Negate boolean flags with `--no-*` syntax.|
 
 ---
 
