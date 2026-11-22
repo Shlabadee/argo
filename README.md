@@ -10,6 +10,8 @@ Argo is an `argv` lexer intended for C and C++ programs. It does not parse the a
 - Flag assignments (e.g. `--flag=value`)
 - Positional arguments
 - Unformatted arguments (after `--`)
+- Options for either first-in or first-out values.
+- Can show if a flag is required (no actual enforcement however).
 - Help/usage screen
 - Error reporting
 
@@ -39,7 +41,7 @@ int main(int argc, char** argv)
 	    Argo_Set("hH?", "help", ArgoOptionType_Boolean, "displays this help message and exits"),
 	    Argo_SetWithFlags("aA", "numA", ArgoOptionType_Float, "number A", ARGO_REQUIRED),
 	    Argo_SetWithFlags("bB", "numB", ArgoOptionType_Float, "number B", ARGO_REQUIRED),
-	    Argo_Set("ty", NULL, ArgoOptionType_Boolean, "example"),
+	    Argo_Set("ty", NULL, ArgoOptionType_Boolean, "example", ARGO_FIRST_IN),
 	    Argo_Set("ui", NULL, ArgoOptionType_Boolean, "example"),
 	};
 
