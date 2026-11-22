@@ -61,7 +61,8 @@ typedef struct ArgoDataHelper
 	size_t argv_i;
 	size_t option_i;
 	ArgoTokenMode mode;
-	bool ignore_unknown_flags;
+	uint32_t argo_flags;
+	bool store_value;
 } ArgoDataHelper;
 
 static ArgoFlagType h_get_flag_type(char* arg)
@@ -110,11 +111,18 @@ static void h_accept_option(ArgoInstance* instance, size_t option_i, char* equal
                             ArgoDataHelper* helper)
 {
 	ArgoOption* option = &instance->options[option_i];
+	uint32_t policy = option->flags & (ARGO_FIRST_IN | ARGO_LAST_IN);
+
+	if (!policy)
+		policy = helper->argo_flags & (ARGO_FIRST_IN | ARGO_LAST_IN);
+
+	helper->store_value = !option->found || policy != ARGO_FIRST_IN;
 	option->found = true;
 
 	if (equals)
 	{
-		option->value = &equals[1];
+		if (helper->store_value)
+			option->value = &equals[1];
 	}
 	else if (option->type != ArgoOptionType_Boolean)
 	{
@@ -135,7 +143,7 @@ static ArgoErrorType h_handle_long_option(ArgoInstance* instance, char* arg,
 	if (length == 0
 	    || h_find_long_option(instance, name, length, &option_i) == ArgoReturnType_Failure)
 	{
-		if (helper->ignore_unknown_flags)
+		if (helper->argo_flags & ARGO_IGNORE_UNKNOWN_FLAGS)
 			return ArgoErrorType_NoError;
 
 		error = ArgoErrorType_UnknownFlag;
@@ -189,7 +197,7 @@ static ArgoErrorType h_handle_short_option(ArgoInstance* instance, char* arg,
 		ArgoErrorType error;
 		if (h_find_short_option(instance, *name, &option_i) == ArgoReturnType_Failure)
 		{
-			if (helper->ignore_unknown_flags)
+			if (helper->argo_flags & ARGO_IGNORE_UNKNOWN_FLAGS)
 				continue;
 
 			error = ArgoErrorType_UnknownFlag;
@@ -270,15 +278,22 @@ static ArgoErrorType h_handle_flag(ArgoInstance* instance, size_t argc, char** a
 }
 
 ArgoReturnType Argo_Tokenize(ArgoInstance* instance, ArgoOption* options, size_t size,
-                             size_t argc, char** argv, bool ignore_unknown_flags)
+                             size_t argc, char** argv, uint32_t argo_flags)
 {
 	ArgoDataHelper helper;
 	helper.mode = ArgoTokenMode_Flag;
 	helper.argv_i = 0;
 	helper.option_i = 0;
-	helper.ignore_unknown_flags = ignore_unknown_flags;
+	helper.argo_flags = argo_flags;
 	instance->size = size;
 	instance->options = options;
+
+	for (size_t i = 0; i < size; ++i)
+	{
+		options[i].found = false;
+		options[i].value = NULL;
+	}
+
 	instance->unformatted = NULL;
 	instance->unformatted_size = 0;
 	instance->positional_size = 0;
@@ -302,7 +317,9 @@ ArgoReturnType Argo_Tokenize(ArgoInstance* instance, ArgoOption* options, size_t
 		}
 		else if (helper.mode == ArgoTokenMode_Value)
 		{
-			instance->options[helper.option_i].value = argv[helper.argv_i];
+			if (helper.store_value)
+				instance->options[helper.option_i].value = argv[helper.argv_i];
+
 			helper.mode = ArgoTokenMode_Flag;
 		}
 		else // ArgoTokenMode_Unformatted
@@ -418,7 +435,8 @@ ArgoReturnType Argo_PrintHelp(ArgoInstance* instance)
 			snprintf(flag_buffer, sizeof(flag_buffer), "  (none)%s", type_hint);
 		}
 
-		printf("%-*s %s\n", (int)max_flag_length, flag_buffer,
+		printf("%-*s %s%s\n", (int)max_flag_length, flag_buffer,
+		       option->flags & ARGO_REQUIRED ? "[required] " : "",
 		       option->description ? option->description : "");
 	}
 

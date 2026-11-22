@@ -26,6 +26,20 @@ typedef enum ArgoOptionType
 	ArgoOptionType_String,
 } ArgoOptionType;
 
+// Tokenizer only. Bit zero preserves the meaning of the old true argument.
+#define ARGO_IGNORE_UNKNOWN_FLAGS UINT32_C(1)
+
+// Tokenizer defaults or per-option overrides for repeated values.
+// With neither bit set, options inherit the tokenizer default (last wins).
+// Within either mask, LAST_IN takes precedence if both bits are supplied.
+#define ARGO_NO_FLAGS UINT32_C(0)
+#define ARGO_LAST_IN UINT32_C(2)  // Keep the last occurrence.
+#define ARGO_FIRST_IN UINT32_C(4) // Keep the first occurrence.
+#define ARGO_LAST_OUT ARGO_FIRST_IN
+
+// Per-option help annotation. The caller checks whether the option was supplied.
+#define ARGO_REQUIRED UINT32_C(8)
+
 typedef struct ArgoOption
 {
 	char* short_name;
@@ -34,12 +48,16 @@ typedef struct ArgoOption
 	char* description;
 	bool found;
 	char* value;
+	uint32_t flags;
 } ArgoOption;
 
 #define Argo_Set(_short_name, _long_name, _type, _description)                                 \
+	Argo_SetFlags(_short_name, _long_name, _type, _description, 0)
+
+#define Argo_SetWithFlags(_short_name, _long_name, _type, _description, _flags)                \
 	{                                                                                          \
 		.short_name = _short_name, .long_name = _long_name, .type = _type,                     \
-		.description = _description, false, NULL,                                              \
+		.description = _description, .found = false, .value = NULL, .flags = (_flags),         \
 	}
 
 typedef struct ArgoInstance
@@ -69,9 +87,11 @@ memory but just borrows it from `argv`, and it doesn't modify `argv` at all.
 Argo relies on the system to resolve `--input-file="path/to/my file.txt"` to
 `--input-file=path/to/my file.txt`. But this is a standard convention so there's *probably*
 nothing to worry about.
+
+Each call starts with fresh found/value results. Pass 0 for the standard tokenizer behavior.
 */
 ArgoReturnType Argo_Tokenize(ArgoInstance* instance, ArgoOption* options, size_t size,
-                             size_t argc, char** argv, bool ignore_unknown_flags);
+                             size_t argc, char** argv, uint32_t argo_flags);
 ArgoReturnType Argo_PrintHelp(ArgoInstance* instance);
 void Argo_PrintError(void);
 
