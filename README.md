@@ -37,10 +37,10 @@ int main(int argc, char** argv)
 
 	ArgoOption options[] = {
 	    Argo_Set("hH?", "help", ArgoOptionType_Boolean, "displays this help message and exits"),
-	    Argo_Set("aA", "numA", ArgoOptionType_Float, "number A"),
-	    Argo_Set("bB", "numB", ArgoOptionType_Float, "number B"),
-	    Argo_Set("ty", NULL, ArgoOptionType_Boolean, "example X"),
-	    Argo_Set("ui", NULL, ArgoOptionType_Boolean, "example Y"),
+	    Argo_SetWithFlags("aA", "numA", ArgoOptionType_Float, "number A", ARGO_REQUIRED),
+	    Argo_SetWithFlags("bB", "numB", ArgoOptionType_Float, "number B", ARGO_REQUIRED),
+	    Argo_Set("ty", NULL, ArgoOptionType_Boolean, "example"),
+	    Argo_Set("ui", NULL, ArgoOptionType_Boolean, "example"),
 	};
 
 	ArgoInstance instance = {0};
@@ -49,9 +49,7 @@ int main(int argc, char** argv)
 	instance.positional_capacity = 2;
 
 	ArgoReturnType rt = Argo_Tokenize(&instance, options, sizeof(options) / sizeof(options[0]),
-	                                  (size_t)argc, argv,
-	                                  true // ignore unknown flags
-	);
+	                                  (size_t)argc, argv, ARGO_IGNORE_UNKNOWN_FLAGS);
 
 	if (!rt)
 	{
