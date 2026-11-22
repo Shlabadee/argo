@@ -52,7 +52,7 @@ typedef struct ArgoOption
 } ArgoOption;
 
 #define Argo_Set(_short_name, _long_name, _type, _description)                                 \
-	Argo_SetFlags(_short_name, _long_name, _type, _description, 0)
+	Argo_SetWithFlags(_short_name, _long_name, _type, _description, 0)
 
 #define Argo_SetWithFlags(_short_name, _long_name, _type, _description, _flags)                \
 	{                                                                                          \
